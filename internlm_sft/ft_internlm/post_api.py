@@ -78,7 +78,17 @@ def load_model_state(model, model_save_dir="./", model_name="adapter_model.bin",
         peft_config.inference_mode = True
         model = get_peft_model(model, peft_config)
         state_dict = torch.load(path_model, map_location=torch.device(device))
+        # print(state_dict.keys())
+        state_dict = {"base_model.model." + k.replace("_orig_mod.", ""): v for k, v in state_dict.items()}
         print(state_dict.keys())
+        print("#" * 128)
+        ### 排查不存在model.keys的 state_dict.key
+        name_dict = {name: 0 for name, param in model.named_parameters()}
+        print(name_dict.keys())
+        print("#" * 128)
+        for state_dict_key in state_dict.keys():
+            if state_dict_key not in name_dict:
+                print("{} is not exist!".format(state_dict_key))
         model.load_state_dict(state_dict, strict=False)
         # model.to(device)
         print("******model loaded success******")
@@ -222,7 +232,7 @@ config = LoraConfig(target_modules=TARGET_MODULES,
                     r=LORA_R,
                     )
 model = get_peft_model(model, config)
-print_named_parameters(model)
+model = load_model_state(model=model, model_save_dir=MODEL_SAVE_DIR)
 
 if USE_CUDA:
     model = model.float16().cuda()
